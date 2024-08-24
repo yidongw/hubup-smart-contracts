@@ -1,33 +1,36 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.23;
 
-import {Greeter} from 'contracts/Greeter.sol';
-import {Script} from 'forge-std/Script.sol';
-import {IERC20} from 'forge-std/interfaces/IERC20.sol';
+import {Script} from "forge-std/Script.sol";
+import {IERC20} from "forge-std/interfaces/IERC20.sol";
+import {ERC20} from "openzeppelin-contracts/token/ERC20/ERC20.sol";
+import {HubUp} from "contracts/HubUp.sol";
+import "forge-std/console.sol";
+
+contract USDC is ERC20 {
+    constructor(uint256 initialSupply, address owner) ERC20("USDC", "USDC") {
+        _mint(owner, initialSupply);
+    }
+}
 
 contract Deploy is Script {
-  struct DeploymentParams {
-    string greeting;
-    IERC20 token;
-  }
+    // Define the initial supply for the USDC token (e.g., 1 million tokens with 18 decimals)
+    uint256 constant initialSupply = 1_000_000 * 10 ** 18; // 1 million tokens with 18 decimals
 
-  /// @notice Deployment parameters for each chain
-  mapping(uint256 _chainId => DeploymentParams _params) internal _deploymentParams;
+    function run() public {
+        vm.startBroadcast();
 
-  function setUp() public {
-    // Mainnet
-    _deploymentParams[1] = DeploymentParams('Hello, Mainnet!', IERC20(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2));
+        // Step 1: Deploy the USDC token and mint all supply to the owner
+        address owner = msg.sender;
+        USDC token = new USDC(initialSupply, owner);
 
-    // Sepolia
-    _deploymentParams[11_155_111] =
-      DeploymentParams('Hello, Sepolia!', IERC20(0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6));
-  }
+        // Step 2: Deploy the HubUp contract with the USDC token's address
+        HubUp hubUp = new HubUp(address(token));
 
-  function run() public {
-    DeploymentParams memory _params = _deploymentParams[block.chainid];
+        vm.stopBroadcast();
 
-    vm.startBroadcast();
-    new Greeter(_params.greeting, _params.token);
-    vm.stopBroadcast();
-  }
+        // Print the deployed addresses
+        console.log("USDC Token Address:", address(token));
+        console.log("HubUp Contract Address:", address(hubUp));
+    }
 }
